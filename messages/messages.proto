@@ -1,0 +1,32 @@
+syntax = "proto3";
+package messages;
+
+option go_package = "./messages";
+
+message Write {
+    string sender_ip = 1;
+    int64 lsn = 2;
+    string key = 3;
+    string val = 4;
+}
+
+message Read {
+    string sender_ip = 1;
+    int64 lsn = 2;
+    string request = 3;
+}
+
+message Ack {
+    string sender_ip = 1;
+    int64 lsn = 2;
+}
+
+message Commit {
+    string sender_ip = 1;
+    int64 lsn = 2;
+}
+
+message Subscribe {
+    string sender_ip = 1; 
+}
+
