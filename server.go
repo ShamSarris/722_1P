@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -22,11 +23,11 @@ type HTTPResponse struct {
 
 // PendingRequest tracks requests waiting for quorum
 type PendingRequest struct {
-	request    *Request
-	acks       int
-	respChan   chan *Response
-	startTime  time.Time
-	committed  bool
+	request   *Request
+	acks      int
+	respChan  chan *Response
+	startTime time.Time
+	committed bool
 }
 
 // Request represents an internal operation
@@ -46,10 +47,10 @@ type Response struct {
 
 // Server manages HTTP endpoints and pending requests
 type Server struct {
-	actor          *Actor
-	pendingReqs    map[int64]*PendingRequest
-	pendingMu      sync.Mutex
-	port           int
+	actor       *Actor
+	pendingReqs map[int64]*PendingRequest
+	pendingMu   sync.Mutex
+	port        int
 }
 
 func NewServer(actor *Actor, port int) *Server {
@@ -64,11 +65,11 @@ func NewServer(actor *Actor, port int) *Server {
 func (s *Server) Start() {
 	// Setup routes
 	http.HandleFunc("/", s.routeHandler)
-	
+
 	// Start server
 	addr := fmt.Sprintf(":%d", s.port)
 	log.Printf("Starting HTTP server on %s", addr)
-	
+
 	go func() {
 		if err := http.ListenAndServe(addr, nil); err != nil {
 			log.Fatalf("HTTP server error: %v", err)
@@ -76,37 +77,37 @@ func (s *Server) Start() {
 	}()
 }
 
-// routeHandler routes requests based on method and path
+// routeHandler handles incoming HTTP requests and routes them appropriately
 func (s *Server) routeHandler(w http.ResponseWriter, r *http.Request) {
-	// Enable CORS if needed
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+	// Extract path from URL (remove leading slash)
+	path := r.URL.Path
+	if path == "/" || path == "" {
+		s.sendError(w, "Key is required in URL path", http.StatusBadRequest)
 		return
 	}
-	
-	// Parse key from URL path
-	// Expected format: /key or /keyname
-	
 
-	//path := strings.TrimPrefix(r.Path, "/")
-	//if path == "" {
-	//	s.sendError(w, "Key is required in URL path", http.StatusBadRequest)
-	//	return
-	//}
-	//key := path
-	
+	// Remove leading slash
+	if path[0] == '/' {
+		path = path[1:]
+	}
+
+	// Route based on HTTP method
 	switch r.Method {
 	case http.MethodGet:
-		//READ
-		//s.handleRead(w, r, key)
+		// GET: /key
+		log.Printf("Received GET request with path: %s", path)
+		s.handleRead(w, r, path)
 	case http.MethodPost:
-		//WRITE
-		//s.handleWrite(w, r, key)
+		// POST: /key/value
+		log.Printf("Received POST request with path: %s", path)
+		parts := strings.Split(path, "/")
+		if len(parts) < 2 {
+			s.sendError(w, "POST requests require format: /key/value", http.StatusBadRequest)
+			return
+		}
+		key := parts[0]
+		value := strings.Join(parts[1:], "/") // In case value contains slashes
+		s.handleWrite(w, r, key, value)
 	default:
 		s.sendError(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
@@ -115,7 +116,7 @@ func (s *Server) routeHandler(w http.ResponseWriter, r *http.Request) {
 // handleRead processes GET requests for reading keys
 func (s *Server) handleRead(w http.ResponseWriter, r *http.Request, key string) {
 	log.Printf("Handling READ request for key: %s", key)
-	
+
 	if s.actor.isPrimary {
 		// Primary: replicate read and wait for quorum
 		// Write actor methods to read and respond
@@ -132,31 +133,24 @@ func (s *Server) handleRead(w http.ResponseWriter, r *http.Request, key string) 
 }
 
 // handleWrite processes POST requests for writing keys
-func (s *Server) handleWrite(w http.ResponseWriter, r *http.Request, key string) {
-	log.Printf("Handling WRITE request for key: %s", key)
-	
+func (s *Server) handleWrite(w http.ResponseWriter, r *http.Request, key string, val string) {
+	log.Printf("Handling WRITE request for key: %s, value: %s", key, val)
+
 	// Only primary can accept writes
 	if !s.actor.isPrimary {
 		s.sendError(w, "Only primary can accept WRITE operations", http.StatusForbidden)
 		return
 	}
-	
-	// Parse request body
-	var httpReq HTTPRequest
-	if err := json.NewDecoder(r.Body).Decode(&httpReq); err != nil {
-		s.sendError(w, fmt.Sprintf("Invalid request body: %v", err), http.StatusBadRequest)
-		return
-	}
-	
-	if httpReq.Val == "" {
+
+	if val == "" {
 		s.sendError(w, "Value is required", http.StatusBadRequest)
 		return
 	}
-	
+
 	// Execute write through actor
 	// Make write method for actors (write http value to hashmap w/ key)
 
-	//resp := s.actor.executeWrite(key, httpReq.Val)
+	//resp := s.actor.executeWrite(key, val)
 	//s.sendResponse(w, resp)
 }
 
@@ -166,11 +160,11 @@ func (s *Server) sendResponse(w http.ResponseWriter, resp *Response) {
 		s.sendError(w, resp.Error, http.StatusInternalServerError)
 		return
 	}
-	
+
 	httpResp := HTTPResponse{
 		Value: resp.Value,
 	}
-	
+
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(httpResp)
 }
@@ -178,11 +172,11 @@ func (s *Server) sendResponse(w http.ResponseWriter, resp *Response) {
 // sendError sends an error response to the client
 func (s *Server) sendError(w http.ResponseWriter, message string, statusCode int) {
 	log.Printf("Error response: %s (status: %d)", message, statusCode)
-	
+
 	httpResp := HTTPResponse{
 		Error: message,
 	}
-	
+
 	w.WriteHeader(statusCode)
 	json.NewEncoder(w).Encode(httpResp)
 }
@@ -191,7 +185,7 @@ func (s *Server) sendError(w http.ResponseWriter, message string, statusCode int
 func (s *Server) RegisterPendingRequest(lsn int64, req *Request) chan *Response {
 	s.pendingMu.Lock()
 	defer s.pendingMu.Unlock()
-	
+
 	pending := &PendingRequest{
 		request:   req,
 		acks:      1, // Primary counts as first ack
@@ -199,7 +193,7 @@ func (s *Server) RegisterPendingRequest(lsn int64, req *Request) chan *Response 
 		startTime: time.Now(),
 		committed: false,
 	}
-	
+
 	s.pendingReqs[lsn] = pending
 	return pending.respChan
 }
@@ -208,12 +202,12 @@ func (s *Server) RegisterPendingRequest(lsn int64, req *Request) chan *Response 
 func (s *Server) RecordAck(lsn int64) (int, bool) {
 	s.pendingMu.Lock()
 	defer s.pendingMu.Unlock()
-	
+
 	pending, exists := s.pendingReqs[lsn]
 	if !exists {
 		return 0, false
 	}
-	
+
 	pending.acks++
 	return pending.acks, true
 }
@@ -222,18 +216,18 @@ func (s *Server) RecordAck(lsn int64) (int, bool) {
 func (s *Server) CompletePendingRequest(lsn int64, resp *Response) {
 	s.pendingMu.Lock()
 	defer s.pendingMu.Unlock()
-	
+
 	pending, exists := s.pendingReqs[lsn]
 	if !exists {
 		return
 	}
-	
+
 	if !pending.committed {
 		pending.committed = true
 		pending.respChan <- resp
 		close(pending.respChan)
 	}
-	
+
 	delete(s.pendingReqs, lsn)
 }
 
@@ -241,7 +235,7 @@ func (s *Server) CompletePendingRequest(lsn int64, resp *Response) {
 func (s *Server) GetPendingRequest(lsn int64) (*PendingRequest, bool) {
 	s.pendingMu.Lock()
 	defer s.pendingMu.Unlock()
-	
+
 	pending, exists := s.pendingReqs[lsn]
 	return pending, exists
 }
