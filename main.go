@@ -61,9 +61,9 @@ func main() {
 				remoter:     remoter,
 				subscribers: 2, // Expecting 2 backups
 				isPrimary:   *isPrimary,
-				Log:         make(map[int64]string),
-				store:       make(map[string]string),
-				httpPort:    *httpPort,
+				// Log:         make(map[int64]*Request),
+				store:    make(map[string]string),
+				httpPort: *httpPort,
 			}
 		})
 		remoter.Register("primary", props)
@@ -88,7 +88,7 @@ func main() {
 			return &Actor{
 				targets:   []*actor.PID{actor.NewPID(primaryIP, "primary")},
 				isPrimary: *isPrimary,
-				Log:       make(map[int64]string),
+				Log:       make(map[int64]*Request),
 				store:     make(map[string]string),
 				httpPort:  *httpPort,
 			}

@@ -32,10 +32,10 @@ type PendingRequest struct {
 
 // Request represents an internal operation
 type Request struct {
-	Type string // "READ" or "WRITE"
-	Key  string
-	Val  string
-	LSN  int64
+	// Type string // "READ" or "WRITE"
+	Key string
+	Val string
+	LSN int64
 }
 
 // Response represents the result of an operation
@@ -47,10 +47,11 @@ type Response struct {
 
 // Server manages HTTP endpoints and pending requests
 type Server struct {
-	actor       *Actor
-	pendingReqs map[int64]*PendingRequest
-	pendingMu   sync.Mutex
-	port        int
+	actor         *Actor
+	pendingReqs   map[int64]*PendingRequest
+	committedReqs []int64
+	pendingMu     sync.Mutex
+	port          int
 }
 
 func NewServer(actor *Actor, port int) *Server {
@@ -137,9 +138,8 @@ func (s *Server) handleWrite(w http.ResponseWriter, r *http.Request, key string,
 	log.Printf("Handling WRITE request for key: %s, value: %s", key, val)
 
 	// Only primary can accept writes
-	if !s.actor.isPrimary {
-		s.sendError(w, "Only primary can accept WRITE operations", http.StatusForbidden)
-		return
+	if s.actor.isPrimary {
+		s.actor.write(&Request{Key: key, Val: val, LSN: -1})
 	}
 
 	if val == "" {
@@ -228,6 +228,7 @@ func (s *Server) CompletePendingRequest(lsn int64, resp *Response) {
 		close(pending.respChan)
 	}
 
+	s.committedReqs = append(s.committedReqs, lsn)
 	delete(s.pendingReqs, lsn)
 }
 
@@ -238,4 +239,16 @@ func (s *Server) GetPendingRequest(lsn int64) (*PendingRequest, bool) {
 
 	pending, exists := s.pendingReqs[lsn]
 	return pending, exists
+}
+
+// Checks to see if lsn is committed
+func (s *Server) isCommitted(lsn int64) bool {
+	s.pendingMu.Lock()
+	defer s.pendingMu.Unlock()
+	for _, committedLSN := range s.committedReqs {
+		if committedLSN == lsn {
+			return true
+		}
+	}
+	return false
 }
