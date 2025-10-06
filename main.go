@@ -54,17 +54,19 @@ func main() {
 	case true:
 		log.Println("Starting as Primary")
 		props := actor.PropsFromProducer(func() actor.Actor {
-			return &Actor{
+			actor := &Actor{
 				targets:     []*actor.PID{},
 				targetNames: make(map[string]string),
 				system:      system,
 				remoter:     remoter,
 				subscribers: 2, // Expecting 2 backups
 				isPrimary:   *isPrimary,
-				// Log:         make(map[int64]*Request),
-				store:    make(map[string]string),
-				httpPort: *httpPort,
+				Log:         make(map[int64]*Request),
+				store:       make(map[string]string),
+				httpPort:    *httpPort,
 			}
+			actor.Server = NewServer(actor, *httpPort)
+			return actor
 		})
 		remoter.Register("primary", props)
 		remoter.Start()
@@ -85,13 +87,16 @@ func main() {
 		fmt.Scanln(&primaryIP)
 
 		props := actor.PropsFromProducer(func() actor.Actor {
-			return &Actor{
-				targets:   []*actor.PID{actor.NewPID(primaryIP, "primary")},
-				isPrimary: *isPrimary,
-				Log:       make(map[int64]*Request),
-				store:     make(map[string]string),
-				httpPort:  *httpPort,
+			actor := &Actor{
+				targets:       []*actor.PID{actor.NewPID(primaryIP, "primary")},
+				isPrimary:     *isPrimary,
+				Log:           make(map[int64]*Request),
+				store:         make(map[string]string),
+				httpPort:      *httpPort,
+				serverStarted: false,
 			}
+			actor.Server = NewServer(actor, *httpPort)
+			return actor
 		})
 		remoter.Register("backup", props)
 		remoter.Start()

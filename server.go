@@ -17,6 +17,7 @@ type HTTPRequest struct {
 
 // HTTPResponse represents the response to clients
 type HTTPResponse struct {
+	Key   string `json:"key,omitempty"`
 	Value string `json:"value,omitempty"`
 	Error string `json:"error,omitempty"`
 }
@@ -41,6 +42,7 @@ type Request struct {
 // Response represents the result of an operation
 type Response struct {
 	Success bool
+	Key     string
 	Value   string
 	Error   string
 }
@@ -138,8 +140,9 @@ func (s *Server) handleWrite(w http.ResponseWriter, r *http.Request, key string,
 	log.Printf("Handling WRITE request for key: %s, value: %s", key, val)
 
 	// Only primary can accept writes
-	if s.actor.isPrimary {
-		s.actor.write(&Request{Key: key, Val: val, LSN: -1})
+	if !s.actor.isPrimary {
+		s.sendError(w, "Only primary can accept writes", http.StatusForbidden)
+		return
 	}
 
 	if val == "" {
@@ -147,11 +150,20 @@ func (s *Server) handleWrite(w http.ResponseWriter, r *http.Request, key string,
 		return
 	}
 
-	// Execute write through actor
-	// Make write method for actors (write http value to hashmap w/ key)
+	// Create request and get response channel
+	req := &Request{Key: key, Val: val, LSN: -1}
+	respChan := s.RegisterPendingRequest(-1, req) // Will be updated with actual LSN in write()
 
-	//resp := s.actor.executeWrite(key, val)
-	//s.sendResponse(w, resp)
+	// Execute write through actor
+	go s.actor.write(req)
+
+	// Wait for response with timeout
+	select {
+	case resp := <-respChan:
+		s.sendResponse(w, resp)
+	case <-time.After(30 * time.Second):
+		s.sendError(w, "Request timeout", http.StatusRequestTimeout)
+	}
 }
 
 // sendResponse sends a successful response to the client
@@ -162,6 +174,7 @@ func (s *Server) sendResponse(w http.ResponseWriter, resp *Response) {
 	}
 
 	httpResp := HTTPResponse{
+		Key:   resp.Key,
 		Value: resp.Value,
 	}
 
@@ -196,6 +209,29 @@ func (s *Server) RegisterPendingRequest(lsn int64, req *Request) chan *Response 
 
 	s.pendingReqs[lsn] = pending
 	return pending.respChan
+}
+
+// UpdatePendingRequestLSN moves a pending request from temporary LSN to actual LSN
+func (s *Server) UpdatePendingRequestLSN(tempLSN, actualLSN int64, req *Request) {
+	s.pendingMu.Lock()
+	defer s.pendingMu.Unlock()
+
+	// Move from temp LSN to actual LSN
+	if pending, exists := s.pendingReqs[tempLSN]; exists {
+		delete(s.pendingReqs, tempLSN)
+		pending.request = req
+		s.pendingReqs[actualLSN] = pending
+	} else {
+		// If not found, create new entry
+		pending := &PendingRequest{
+			request:   req,
+			acks:      1, // Primary counts as first ack
+			respChan:  make(chan *Response, 1),
+			startTime: time.Now(),
+			committed: false,
+		}
+		s.pendingReqs[actualLSN] = pending
+	}
 }
 
 // RecordAck increments the ack count for a pending request
