@@ -120,18 +120,21 @@ func (s *Server) routeHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleRead(w http.ResponseWriter, r *http.Request, key string) {
 	log.Printf("Handling READ request for key: %s", key)
 
-	if s.actor.isPrimary {
-		// Primary: replicate read and wait for quorum
-		// Write actor methods to read and respond
+	if key == "" {
+		s.sendError(w, "Key is required", http.StatusBadRequest)
+		return
+	}
 
-		//resp := s.actor.executeRead(key)
-		//s.sendResponse(w, resp)
-	} else {
-		// Backup: read directly from store
-		// Write actor methods to read and respond
+	req := &Request{Key: key, LSN: -1}
+	respChan := s.RegisterPendingRequest(-1, req) // Will be updated with actual LSN in read()
 
-		//resp := s.actor.readFromStore(key)
-		//s.sendResponse(w, resp)
+	go s.actor.read(req)
+
+	select {
+	case resp := <-respChan:
+		s.sendResponse(w, resp)
+	case <-time.After(30 * time.Second):
+		s.sendError(w, "Request timeout", http.StatusRequestTimeout)
 	}
 }
 
@@ -154,7 +157,6 @@ func (s *Server) handleWrite(w http.ResponseWriter, r *http.Request, key string,
 	req := &Request{Key: key, Val: val, LSN: -1}
 	respChan := s.RegisterPendingRequest(-1, req) // Will be updated with actual LSN in write()
 
-	// Execute write through actor
 	go s.actor.write(req)
 
 	// Wait for response with timeout

@@ -4,6 +4,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"sync"
 	"sync/atomic"
 
 	"distributed/messages"
@@ -13,12 +14,13 @@ import (
 )
 
 type Actor struct {
-	targets     []*actor.PID
-	targetNames map[string]string
-	system      *actor.ActorSystem
-	subscribers int
-	remoter     *remote.Remote
-	// mu          sync.Mutex
+	targets       []*actor.PID
+	targetNames   map[string]string
+	system        *actor.ActorSystem
+	subscribers   int
+	remoter       *remote.Remote
+	logMu         sync.Mutex // Guards Log
+	storeMu       sync.Mutex // Guards store
 	isPrimary     bool
 	httpPort      int
 	Server        *Server
@@ -66,37 +68,57 @@ func (a *Actor) Receive(ctx actor.Context) {
 		}
 		log.Printf("%s: Received Write(LSN=%d, Key=%s, Value=%s) from %s\n",
 			role(a.isPrimary), msg.Lsn, msg.Key, msg.Val, senderStr)
+		a.logMu.Lock()             // Guarding Log
 		a.Log[msg.Lsn] = &Request{ // Remember requested LSN in Log
 			Key: msg.Key,
 			Val: msg.Val,
 		}
+		a.logMu.Unlock()
 		// Only send Ack if we have a valid sender
 		if ctx.Sender() != nil {
 			ctx.Request(ctx.Sender(), &messages.Ack{Lsn: msg.Lsn}) // Tell primary we logged the requested LSN
 		}
 	case *messages.Ack:
 		if a.isPrimary {
+			var isWrite = true
+			if ctx.Sender() == nil {
+				isWrite = false
+			}
+
 			// Step 5) Primary receives Ack from backup
 			log.Printf("Primary: Received Ack(LSN=%d) from %s\n", msg.Lsn, ctx.Sender().String())
 			acks, exists := a.Server.RecordAck(msg.Lsn)
 
 			if exists && acks >= 2 { // Quorum reached (w/ 2 backups + 1 primary)
 				if a.Server.isCommitted(msg.Lsn-1) || msg.Lsn == 1 { // TODO: Not sure if this is right; Need to check previous LSN has been APPLIED to store. If previous hasn't been applied put it in a queue and apply later
-					for _, target := range a.targets {
-						log.Printf("Primary: Sending Commit(LSN=%d) to %s\n", msg.Lsn, target.String())
-						ctx.Send(target, &messages.Commit{Lsn: msg.Lsn}) // Tell backups to commit
+					if isWrite { // Only send commit on writes (read acks don't expect a commit)
+						for _, target := range a.targets {
+							log.Printf("Primary: Sending Commit(LSN=%d) to %s\n", msg.Lsn, target.String())
+							ctx.Send(target, &messages.Commit{Lsn: msg.Lsn}) // Tell backups to commit
+						}
 					}
 
 					toCom, exist := a.Server.GetPendingRequest(msg.Lsn)
+					a.storeMu.Lock()
+					defer a.storeMu.Unlock()
 					if exist {
-						a.store[toCom.request.Key] = toCom.request.Val // Commit to store
-						log.Printf("Primary: Committed LSN %d (Key=%s, Value=%s) to store\n", msg.Lsn, toCom.request.Key, toCom.request.Val)
-						a.Server.CompletePendingRequest(msg.Lsn, &Response{
-							Success: true,
-							Key:     toCom.request.Key,
-							Value:   toCom.request.Val,
-							Error:   "",
-						})
+						if isWrite {
+							a.store[toCom.request.Key] = toCom.request.Val // Commit to store
+							log.Printf("Primary: Committed LSN %d (Key=%s, Value=%s) to store\n", msg.Lsn, toCom.request.Key, toCom.request.Val)
+							a.Server.CompletePendingRequest(msg.Lsn, &Response{
+								Success: true,
+								Key:     toCom.request.Key,
+								Value:   toCom.request.Val,
+								Error:   "",
+							})
+						} else {
+							a.Server.CompletePendingRequest(msg.Lsn, &Response{
+								Success: true,
+								Key:     toCom.request.Key,
+								Value:   a.store[toCom.request.Key], // Read from store
+								Error:   "",
+							})
+						}
 					}
 				} else {
 					// What to do if previous LSN not committed? Probably add to queue and check queue each write
@@ -107,10 +129,23 @@ func (a *Actor) Receive(ctx actor.Context) {
 		}
 	case *messages.Commit:
 		log.Printf("%s: Received Commit(LSN=%d) from %s\n", role(a.isPrimary), msg.Lsn, ctx.Sender().String())
+		a.logMu.Lock()
+		defer a.logMu.Unlock()
+		a.storeMu.Lock()
+		defer a.storeMu.Unlock()
 		if req, exists := a.Log[msg.Lsn]; exists { // TODO: also check if the previous LSN has been applied to store
 			a.store[req.Key] = req.Val
 			log.Printf("%s: Committed LSN %d (Key=%s, Value=%s) to store\n", role(a.isPrimary), msg.Lsn, req.Key, req.Val)
 		}
+	case *messages.Read:
+		log.Printf("%s: Received Read(LSN=%d, Key=%s) from %s\n", role(a.isPrimary), msg.Lsn, msg.Request, ctx.Sender().String())
+		a.logMu.Lock()
+		a.Log[msg.Lsn] = &Request{
+			Key: msg.Request,
+		}
+		a.logMu.Unlock()
+
+		ctx.Send(ctx.Sender(), &messages.Ack{Lsn: msg.Lsn}) // Ack but expect no commit msg back
 	}
 }
 
@@ -132,6 +167,38 @@ func (a *Actor) write(req *Request) {
 		log.Printf("%s: Sending Write(LSN=%d, Key=%s, Value=%s) to %s\n",
 			role(a.isPrimary), accept.Lsn, accept.Key, accept.Val, target.String())
 		a.ctx.Request(target, accept)
+	}
+}
+
+func (a *Actor) read(req *Request) {
+	if !a.isPrimary {
+		a.storeMu.Lock()
+		defer a.storeMu.Unlock()
+
+		if val, exists := a.store[req.Key]; exists {
+			// Return the value if key exists
+			log.Printf("Backup: Read Key=%s, Value=%s from store\n", req.Key, val)
+			a.Server.CompletePendingRequest(req.LSN, &Response{
+				Success: true,
+				Key:     req.Key,
+				Value:   val,
+				Error:   "",
+			})
+		}
+	} else {
+		req.LSN = a.lsn.Add(1)
+		a.Server.UpdatePendingRequestLSN(-1, req.LSN, req)
+
+		accept := &messages.Read{
+			Lsn:     req.LSN,
+			Request: req.Key,
+		}
+
+		for _, target := range a.targets {
+			log.Printf("Primary: Sending Read(LSN=%d, Key=%s) to %s\n",
+				accept.Lsn, accept.Request, target.String())
+			a.ctx.Request(target, accept)
+		}
 	}
 }
 
