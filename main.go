@@ -55,15 +55,16 @@ func main() {
 		log.Println("Starting as Primary")
 		props := actor.PropsFromProducer(func() actor.Actor {
 			actor := &Actor{
-				targets:     []*actor.PID{},
-				targetNames: make(map[string]string),
-				system:      system,
-				remoter:     remoter,
-				subscribers: 2, // Expecting 2 backups
-				isPrimary:   *isPrimary,
-				Log:         make(map[int64]*Request),
-				store:       make(map[string]string),
-				httpPort:    *httpPort,
+				targets:        []*actor.PID{},
+				targetNames:    make(map[string]string),
+				system:         system,
+				remoter:        remoter,
+				subscribers:    2, // Expecting 2 backups
+				isPrimary:      *isPrimary,
+				Log:            make(map[int64]*Request),
+				store:          make(map[string]string),
+				httpPort:       *httpPort,
+				pendingCommits: make(map[int64]*Request), // Initialize pending commits queue
 			}
 			actor.Server = NewServer(actor, *httpPort)
 			return actor
@@ -88,12 +89,13 @@ func main() {
 
 		props := actor.PropsFromProducer(func() actor.Actor {
 			actor := &Actor{
-				targets:       []*actor.PID{actor.NewPID(primaryIP, "primary")},
-				isPrimary:     *isPrimary,
-				Log:           make(map[int64]*Request),
-				store:         make(map[string]string),
-				httpPort:      *httpPort,
-				serverStarted: false,
+				targets:        []*actor.PID{actor.NewPID(primaryIP, "primary")},
+				isPrimary:      *isPrimary,
+				Log:            make(map[int64]*Request),
+				store:          make(map[string]string),
+				httpPort:       *httpPort,
+				serverStarted:  false,
+				pendingCommits: make(map[int64]*Request), // Initialize pending commits queue
 			}
 			actor.Server = NewServer(actor, *httpPort)
 			return actor

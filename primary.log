@@ -1,0 +1,140 @@
+[2m11:56PM[0m [92mINF[0m actor system started [2mlib=[0mProto.Actor [2msystem=[0mZMTpL6aK5xVpDofxwdSg3d [2mid=[0mZMTpL6aK5xVpDofxwdSg3d
+2025/10/06 23:56:10 Starting as Primary
+[2m11:56PM[0m [92mINF[0m Starting remote with address [2mlib=[0mProto.Actor [2msystem=[0mZMTpL6aK5xVpDofxwdSg3d [2maddress=[0m127.0.0.1:8080
+[2m11:56PM[0m [92mINF[0m Started Activator [2mlib=[0mProto.Actor [2msystem=[0mZMTpL6aK5xVpDofxwdSg3d
+[2m11:56PM[0m [92mINF[0m Started EndpointManager [2mlib=[0mProto.Actor [2msystem=[0mZMTpL6aK5xVpDofxwdSg3d
+[2m11:56PM[0m [92mINF[0m Starting Proto.Actor server [2mlib=[0mProto.Actor [2msystem=[0mZMTpL6aK5xVpDofxwdSg3d [2maddress=[0m127.0.0.1:8080
+2025/10/06 23:56:11 Backups subscribe to: 127.0.0.1:8080
+2025/10/06 23:56:11 Starting HTTP server on :8081
+2025/10/06 23:56:12 Primary: Received Subscribe message from Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:12 Primary: Current targets: [Address:"127.0.0.1:8082" Id:"backup"]
+2025/10/06 23:56:14 Primary: Received Subscribe message from Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:14 Primary: Current targets: [Address:"127.0.0.1:8082" Id:"backup" Address:"127.0.0.1:8084" Id:"backup"]
+2025/10/06 23:56:14 Primary: All backups have subscribed. Ready to process requests.
+2025/10/06 23:56:22 Received POST request with path: key1/value1
+2025/10/06 23:56:22 Handling WRITE request for key: key1, value: value1
+2025/10/06 23:56:22 Primary: Sending Write(LSN=1, Key=key1, Value=value1) to Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:22 Primary: Sending Write(LSN=1, Key=key1, Value=value1) to Address:"127.0.0.1:8084" Id:"backup"
+[2m11:56PM[0m [92mINF[0m Started EndpointWriter. connecting [2mlib=[0mProto.Actor [2msystem=[0mZMTpL6aK5xVpDofxwdSg3d [2maddress=[0m127.0.0.1:8082
+[2m11:56PM[0m [92mINF[0m Started EndpointWatcher [2mlib=[0mProto.Actor [2msystem=[0mZMTpL6aK5xVpDofxwdSg3d [2maddress=[0m127.0.0.1:8082
+[2m11:56PM[0m [92mINF[0m Started EndpointWatcher [2mlib=[0mProto.Actor [2msystem=[0mZMTpL6aK5xVpDofxwdSg3d [2maddress=[0m127.0.0.1:8084
+[2m11:56PM[0m [92mINF[0m Started EndpointWriter. connecting [2mlib=[0mProto.Actor [2msystem=[0mZMTpL6aK5xVpDofxwdSg3d [2maddress=[0m127.0.0.1:8084
+[2m11:56PM[0m [92mINF[0m EndpointWriter connected [2mlib=[0mProto.Actor [2msystem=[0mZMTpL6aK5xVpDofxwdSg3d [2maddress=[0m127.0.0.1:8082 [2mcost=[0m1.701334ms
+[2m11:56PM[0m [92mINF[0m EndpointWriter connected [2mlib=[0mProto.Actor [2msystem=[0mZMTpL6aK5xVpDofxwdSg3d [2maddress=[0m127.0.0.1:8084 [2mcost=[0m1.385917ms
+2025/10/06 23:56:22 Primary: Received Ack(LSN=1) from Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:22 Primary: Sending Commit(LSN=1) to Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:22 Primary: Sending Commit(LSN=1) to Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:22 Primary: Applied LSN 1 (Key=key1, Value=value1) to store
+2025/10/06 23:56:22 Primary: Received Ack(LSN=1) from Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:22 Received POST request with path: key2/value2
+2025/10/06 23:56:22 Handling WRITE request for key: key2, value: value2
+2025/10/06 23:56:22 Primary: Sending Write(LSN=2, Key=key2, Value=value2) to Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:22 Primary: Sending Write(LSN=2, Key=key2, Value=value2) to Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:22 Primary: Received Ack(LSN=2) from Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:22 Primary: Sending Commit(LSN=2) to Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:22 Primary: Sending Commit(LSN=2) to Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:22 Primary: Applied LSN 2 (Key=key2, Value=value2) to store
+2025/10/06 23:56:22 Primary: Received Ack(LSN=2) from Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:22 Received POST request with path: key3/value3
+2025/10/06 23:56:22 Handling WRITE request for key: key3, value: value3
+2025/10/06 23:56:22 Primary: Sending Write(LSN=3, Key=key3, Value=value3) to Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:22 Primary: Sending Write(LSN=3, Key=key3, Value=value3) to Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:22 Primary: Received Ack(LSN=3) from Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:22 Primary: Sending Commit(LSN=3) to Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:22 Primary: Sending Commit(LSN=3) to Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:22 Primary: Applied LSN 3 (Key=key3, Value=value3) to store
+2025/10/06 23:56:22 Primary: Received Ack(LSN=3) from Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:22 Received GET request with path: key1
+2025/10/06 23:56:22 Handling READ request for key: key1
+2025/10/06 23:56:22 Primary: Sending Read(LSN=4, Key=key1) to Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:22 Primary: Sending Read(LSN=4, Key=key1) to Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:22 Primary: Received Ack(LSN=4) from <nil>
+2025/10/06 23:56:22 Primary: Received Ack(LSN=4) from <nil>
+2025/10/06 23:56:22 Received GET request with path: key2
+2025/10/06 23:56:22 Handling READ request for key: key2
+2025/10/06 23:56:22 Primary: Sending Read(LSN=5, Key=key2) to Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:22 Primary: Sending Read(LSN=5, Key=key2) to Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:22 Primary: Received Ack(LSN=5) from <nil>
+2025/10/06 23:56:22 Primary: Received Ack(LSN=5) from <nil>
+2025/10/06 23:56:22 Received GET request with path: nonexistent
+2025/10/06 23:56:22 Handling READ request for key: nonexistent
+2025/10/06 23:56:22 Primary: Sending Read(LSN=6, Key=nonexistent) to Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:22 Primary: Sending Read(LSN=6, Key=nonexistent) to Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:22 Primary: Received Ack(LSN=6) from <nil>
+2025/10/06 23:56:22 Error response: Key not found (status: 500)
+2025/10/06 23:56:22 Primary: Received Ack(LSN=6) from <nil>
+2025/10/06 23:56:24 Received POST request with path: key1/newvalue1
+2025/10/06 23:56:24 Handling WRITE request for key: key1, value: newvalue1
+2025/10/06 23:56:24 Primary: Sending Write(LSN=7, Key=key1, Value=newvalue1) to Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:24 Primary: Sending Write(LSN=7, Key=key1, Value=newvalue1) to Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:24 Primary: Received Ack(LSN=7) from Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:24 Primary: Sending Commit(LSN=7) to Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:24 Primary: Sending Commit(LSN=7) to Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:24 Primary: Applied LSN 7 (Key=key1, Value=newvalue1) to store
+2025/10/06 23:56:24 Primary: Received Ack(LSN=7) from Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:26 Received GET request with path: key1
+2025/10/06 23:56:26 Handling READ request for key: key1
+2025/10/06 23:56:26 Primary: Sending Read(LSN=8, Key=key1) to Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:26 Primary: Sending Read(LSN=8, Key=key1) to Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:26 Primary: Received Ack(LSN=8) from <nil>
+2025/10/06 23:56:26 Primary: Received Ack(LSN=8) from <nil>
+2025/10/06 23:56:26 Received POST request with path: seq1/value1
+2025/10/06 23:56:26 Handling WRITE request for key: seq1, value: value1
+2025/10/06 23:56:26 Primary: Sending Write(LSN=9, Key=seq1, Value=value1) to Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:26 Primary: Sending Write(LSN=9, Key=seq1, Value=value1) to Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:26 Primary: Received Ack(LSN=9) from Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:26 Primary: Sending Commit(LSN=9) to Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:26 Primary: Sending Commit(LSN=9) to Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:26 Primary: Applied LSN 9 (Key=seq1, Value=value1) to store
+2025/10/06 23:56:26 Primary: Received Ack(LSN=9) from Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:26 Received POST request with path: seq2/value2
+2025/10/06 23:56:26 Handling WRITE request for key: seq2, value: value2
+2025/10/06 23:56:26 Primary: Sending Write(LSN=10, Key=seq2, Value=value2) to Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:26 Primary: Sending Write(LSN=10, Key=seq2, Value=value2) to Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:26 Primary: Received Ack(LSN=10) from Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:26 Primary: Sending Commit(LSN=10) to Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:26 Primary: Sending Commit(LSN=10) to Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:26 Primary: Applied LSN 10 (Key=seq2, Value=value2) to store
+2025/10/06 23:56:26 Primary: Received Ack(LSN=10) from Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:26 Received POST request with path: seq3/value3
+2025/10/06 23:56:26 Handling WRITE request for key: seq3, value: value3
+2025/10/06 23:56:26 Primary: Sending Write(LSN=11, Key=seq3, Value=value3) to Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:26 Primary: Sending Write(LSN=11, Key=seq3, Value=value3) to Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:26 Primary: Received Ack(LSN=11) from Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:26 Primary: Sending Commit(LSN=11) to Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:26 Primary: Sending Commit(LSN=11) to Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:26 Primary: Applied LSN 11 (Key=seq3, Value=value3) to store
+2025/10/06 23:56:26 Primary: Received Ack(LSN=11) from Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:26 Received POST request with path: seq4/value4
+2025/10/06 23:56:26 Handling WRITE request for key: seq4, value: value4
+2025/10/06 23:56:26 Primary: Sending Write(LSN=12, Key=seq4, Value=value4) to Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:26 Primary: Sending Write(LSN=12, Key=seq4, Value=value4) to Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:26 Primary: Received Ack(LSN=12) from Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:26 Primary: Sending Commit(LSN=12) to Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:26 Primary: Sending Commit(LSN=12) to Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:26 Primary: Applied LSN 12 (Key=seq4, Value=value4) to store
+2025/10/06 23:56:26 Primary: Received Ack(LSN=12) from Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:26 Received POST request with path: seq5/value5
+2025/10/06 23:56:26 Handling WRITE request for key: seq5, value: value5
+2025/10/06 23:56:26 Primary: Sending Write(LSN=13, Key=seq5, Value=value5) to Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:26 Primary: Sending Write(LSN=13, Key=seq5, Value=value5) to Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:26 Primary: Received Ack(LSN=13) from Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:26 Primary: Sending Commit(LSN=13) to Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:26 Primary: Sending Commit(LSN=13) to Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:26 Primary: Applied LSN 13 (Key=seq5, Value=value5) to store
+2025/10/06 23:56:26 Primary: Received Ack(LSN=13) from Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:28 Received POST request with path: consistency/final
+2025/10/06 23:56:28 Handling WRITE request for key: consistency, value: final
+2025/10/06 23:56:28 Primary: Sending Write(LSN=14, Key=consistency, Value=final) to Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:28 Primary: Sending Write(LSN=14, Key=consistency, Value=final) to Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:28 Primary: Received Ack(LSN=14) from Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:28 Primary: Sending Commit(LSN=14) to Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:28 Primary: Sending Commit(LSN=14) to Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:28 Primary: Applied LSN 14 (Key=consistency, Value=final) to store
+2025/10/06 23:56:28 Primary: Received Ack(LSN=14) from Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:30 Received GET request with path: consistency
+2025/10/06 23:56:30 Handling READ request for key: consistency
+2025/10/06 23:56:30 Primary: Sending Read(LSN=15, Key=consistency) to Address:"127.0.0.1:8082" Id:"backup"
+2025/10/06 23:56:30 Primary: Sending Read(LSN=15, Key=consistency) to Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:30 Primary: Received Ack(LSN=15) from <nil>
+2025/10/06 23:56:30 Primary: Received Ack(LSN=15) from <nil>

@@ -33,10 +33,10 @@ type PendingRequest struct {
 
 // Request represents an internal operation
 type Request struct {
-	// Type string // "READ" or "WRITE"
-	Key string
-	Val string
-	LSN int64
+	Type string // "READ" or "WRITE"
+	Key  string
+	Val  string
+	LSN  int64
 }
 
 // Response represents the result of an operation
@@ -125,7 +125,7 @@ func (s *Server) handleRead(w http.ResponseWriter, r *http.Request, key string) 
 		return
 	}
 
-	req := &Request{Key: key, LSN: -1}
+	req := &Request{Type: "READ", Key: key, LSN: -1}
 	respChan := s.RegisterPendingRequest(-1, req) // Will be updated with actual LSN in read()
 
 	go s.actor.read(req)
@@ -154,7 +154,7 @@ func (s *Server) handleWrite(w http.ResponseWriter, r *http.Request, key string,
 	}
 
 	// Create request and get response channel
-	req := &Request{Key: key, Val: val, LSN: -1}
+	req := &Request{Type: "WRITE", Key: key, Val: val, LSN: -1}
 	respChan := s.RegisterPendingRequest(-1, req) // Will be updated with actual LSN in write()
 
 	go s.actor.write(req)

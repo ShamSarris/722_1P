@@ -1,0 +1,69 @@
+[2m11:56PM[0m [92mINF[0m actor system started [2mlib=[0mProto.Actor [2msystem=[0mjZfqBqGSfQH2d9wkpELy5s [2mid=[0mjZfqBqGSfQH2d9wkpELy5s
+2025/10/06 23:56:14 Starting as Backup
+Enter the IP address of the primary node: [2m11:56PM[0m [92mINF[0m Starting remote with address [2mlib=[0mProto.Actor [2msystem=[0mjZfqBqGSfQH2d9wkpELy5s [2maddress=[0m127.0.0.1:8084
+[2m11:56PM[0m [92mINF[0m Started Activator [2mlib=[0mProto.Actor [2msystem=[0mjZfqBqGSfQH2d9wkpELy5s
+[2m11:56PM[0m [92mINF[0m Started EndpointManager [2mlib=[0mProto.Actor [2msystem=[0mjZfqBqGSfQH2d9wkpELy5s
+[2m11:56PM[0m [92mINF[0m Starting Proto.Actor server [2mlib=[0mProto.Actor [2msystem=[0mjZfqBqGSfQH2d9wkpELy5s [2maddress=[0m127.0.0.1:8084
+2025/10/06 23:56:14 Spawned Backup actor with PID: Address:"127.0.0.1:8084" Id:"backup"
+2025/10/06 23:56:14 Starting HTTP server on :8085
+[2m11:56PM[0m [92mINF[0m Started EndpointWriter. connecting [2mlib=[0mProto.Actor [2msystem=[0mjZfqBqGSfQH2d9wkpELy5s [2maddress=[0m127.0.0.1:8080
+[2m11:56PM[0m [92mINF[0m Started EndpointWatcher [2mlib=[0mProto.Actor [2msystem=[0mjZfqBqGSfQH2d9wkpELy5s [2maddress=[0m127.0.0.1:8080
+[2m11:56PM[0m [92mINF[0m EndpointWriter connected [2mlib=[0mProto.Actor [2msystem=[0mjZfqBqGSfQH2d9wkpELy5s [2maddress=[0m127.0.0.1:8080 [2mcost=[0m1.634625ms
+2025/10/06 23:56:22 Backup: Received Write(LSN=1, Key=key1, Value=value1) from Address:"127.0.0.1:8080" Id:"primary"
+2025/10/06 23:56:22 Backup: Received Commit(LSN=1) from <nil>
+2025/10/06 23:56:22 Backup: Applied LSN 1 (Key=key1, Value=value1) to store
+2025/10/06 23:56:22 Backup: Received Write(LSN=2, Key=key2, Value=value2) from Address:"127.0.0.1:8080" Id:"primary"
+2025/10/06 23:56:22 Backup: Received Commit(LSN=2) from <nil>
+2025/10/06 23:56:22 Backup: Applied LSN 2 (Key=key2, Value=value2) to store
+2025/10/06 23:56:22 Backup: Received Write(LSN=3, Key=key3, Value=value3) from Address:"127.0.0.1:8080" Id:"primary"
+2025/10/06 23:56:22 Backup: Received Commit(LSN=3) from <nil>
+2025/10/06 23:56:22 Backup: Applied LSN 3 (Key=key3, Value=value3) to store
+2025/10/06 23:56:22 Backup: Received Read(LSN=4, Key=key1) from Address:"127.0.0.1:8080" Id:"primary"
+2025/10/06 23:56:22 Backup: Updated lastAppliedLSN to 4 (READ operation)
+2025/10/06 23:56:22 Backup: Received Read(LSN=5, Key=key2) from Address:"127.0.0.1:8080" Id:"primary"
+2025/10/06 23:56:22 Backup: Updated lastAppliedLSN to 5 (READ operation)
+2025/10/06 23:56:22 Backup: Received Read(LSN=6, Key=nonexistent) from Address:"127.0.0.1:8080" Id:"primary"
+2025/10/06 23:56:22 Backup: Updated lastAppliedLSN to 6 (READ operation)
+2025/10/06 23:56:24 Received GET request with path: key1
+2025/10/06 23:56:24 Handling READ request for key: key1
+2025/10/06 23:56:24 Backup: Read Key=key1, Value=value1 from store
+2025/10/06 23:56:24 Received GET request with path: key3
+2025/10/06 23:56:24 Handling READ request for key: key3
+2025/10/06 23:56:24 Backup: Read Key=key3, Value=value3 from store
+2025/10/06 23:56:24 Received POST request with path: test/fail
+2025/10/06 23:56:24 Handling WRITE request for key: test, value: fail
+2025/10/06 23:56:24 Error response: Only primary can accept writes (status: 403)
+2025/10/06 23:56:24 Backup: Received Write(LSN=7, Key=key1, Value=newvalue1) from Address:"127.0.0.1:8080" Id:"primary"
+2025/10/06 23:56:24 Backup: Received Commit(LSN=7) from <nil>
+2025/10/06 23:56:24 Backup: Applied LSN 7 (Key=key1, Value=newvalue1) to store
+2025/10/06 23:56:26 Backup: Received Read(LSN=8, Key=key1) from Address:"127.0.0.1:8080" Id:"primary"
+2025/10/06 23:56:26 Backup: Updated lastAppliedLSN to 8 (READ operation)
+2025/10/06 23:56:26 Received GET request with path: key1
+2025/10/06 23:56:26 Handling READ request for key: key1
+2025/10/06 23:56:26 Backup: Read Key=key1, Value=newvalue1 from store
+2025/10/06 23:56:26 Backup: Received Write(LSN=9, Key=seq1, Value=value1) from Address:"127.0.0.1:8080" Id:"primary"
+2025/10/06 23:56:26 Backup: Received Commit(LSN=9) from <nil>
+2025/10/06 23:56:26 Backup: Applied LSN 9 (Key=seq1, Value=value1) to store
+2025/10/06 23:56:26 Backup: Received Write(LSN=10, Key=seq2, Value=value2) from Address:"127.0.0.1:8080" Id:"primary"
+2025/10/06 23:56:26 Backup: Received Commit(LSN=10) from <nil>
+2025/10/06 23:56:26 Backup: Applied LSN 10 (Key=seq2, Value=value2) to store
+2025/10/06 23:56:26 Backup: Received Write(LSN=11, Key=seq3, Value=value3) from Address:"127.0.0.1:8080" Id:"primary"
+2025/10/06 23:56:26 Backup: Received Commit(LSN=11) from <nil>
+2025/10/06 23:56:26 Backup: Applied LSN 11 (Key=seq3, Value=value3) to store
+2025/10/06 23:56:26 Backup: Received Write(LSN=12, Key=seq4, Value=value4) from Address:"127.0.0.1:8080" Id:"primary"
+2025/10/06 23:56:26 Backup: Received Commit(LSN=12) from <nil>
+2025/10/06 23:56:26 Backup: Applied LSN 12 (Key=seq4, Value=value4) to store
+2025/10/06 23:56:26 Backup: Received Write(LSN=13, Key=seq5, Value=value5) from Address:"127.0.0.1:8080" Id:"primary"
+2025/10/06 23:56:26 Backup: Received Commit(LSN=13) from <nil>
+2025/10/06 23:56:26 Backup: Applied LSN 13 (Key=seq5, Value=value5) to store
+2025/10/06 23:56:28 Received GET request with path: seq3
+2025/10/06 23:56:28 Handling READ request for key: seq3
+2025/10/06 23:56:28 Backup: Read Key=seq3, Value=value3 from store
+2025/10/06 23:56:28 Backup: Received Write(LSN=14, Key=consistency, Value=final) from Address:"127.0.0.1:8080" Id:"primary"
+2025/10/06 23:56:28 Backup: Received Commit(LSN=14) from <nil>
+2025/10/06 23:56:28 Backup: Applied LSN 14 (Key=consistency, Value=final) to store
+2025/10/06 23:56:30 Backup: Received Read(LSN=15, Key=consistency) from Address:"127.0.0.1:8080" Id:"primary"
+2025/10/06 23:56:30 Backup: Updated lastAppliedLSN to 15 (READ operation)
+2025/10/06 23:56:30 Received GET request with path: consistency
+2025/10/06 23:56:30 Handling READ request for key: consistency
+2025/10/06 23:56:30 Backup: Read Key=consistency, Value=final from store
