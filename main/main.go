@@ -41,6 +41,7 @@ func main() {
 	port := flag.Int("port", 8080, "Port for actor system")
 	httpPort := flag.Int("http", 8081, "Port for HTTP server")
 	isPrimary := flag.Bool("primary", false, "Run as primary node")
+	backups := flag.Int("backups", 2, "Number of backup nodes (only for primary)")
 
 	flag.Parse()
 
@@ -59,12 +60,13 @@ func main() {
 				targetNames:    make(map[string]string),
 				system:         system,
 				remoter:        remoter,
-				subscribers:    2, // Expecting 2 backups
+				subscribers:    *backups,
 				isPrimary:      *isPrimary,
 				Log:            make(map[int64]*Request),
 				store:          make(map[string]string),
 				httpPort:       *httpPort,
 				pendingCommits: make(map[int64]*Request), // Initialize pending commits queue
+				// firstRun:       true,
 			}
 			actor.Server = NewServer(actor, *httpPort)
 			return actor
@@ -96,6 +98,7 @@ func main() {
 				httpPort:       *httpPort,
 				serverStarted:  false,
 				pendingCommits: make(map[int64]*Request), // Initialize pending commits queue
+				// firstRun:       true,
 			}
 			actor.Server = NewServer(actor, *httpPort)
 			return actor

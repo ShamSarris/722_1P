@@ -1,9 +1,9 @@
 package main
 
-// Will contain actor definitions and message/reply logic
 import (
 	"fmt"
 	"log"
+	"math"
 	"sync"
 	"sync/atomic"
 
@@ -19,19 +19,19 @@ type Actor struct {
 	system         *actor.ActorSystem
 	subscribers    int
 	remoter        *remote.Remote
-	logMu          sync.Mutex          // Guards Log
-	storeMu        sync.Mutex          // Guards store
+	Mu             sync.Mutex // Guards store + log
 	isPrimary      bool
 	httpPort       int
 	Server         *Server
-	Log            map[int64]*Request  // LSN => Request  (key, value) (Note capital L)
-	store          map[string]string   // Requests (key => value)
-	lsn            atomic.Int64        // Monotonically increasing log sequence number
+	Log            map[int64]*Request // LSN => Request  (key, value) (Note capital L)
+	store          map[string]string  // Requests (key => value)
+	lsn            atomic.Int64       // Monotonically increasing log sequence number
 	serverStarted  bool
-	ctx            actor.Context       // Store context for use in write method
-	lastAppliedLSN atomic.Int64        // Track the last LSN applied to store
-	pendingCommits map[int64]*Request  // Queue of commits waiting for previous LSN
-	pendingMu      sync.Mutex          // Guards pendingCommits
+	ctx            actor.Context      // Store context for use in write method
+	lastAppliedLSN atomic.Int64       // Track the last LSN applied to store
+	pendingCommits map[int64]*Request // Queue of commits waiting for previous LSN
+	pendingMu      sync.Mutex         // Guards pendingCommits
+	// firstRun       bool               // To track first run for testing
 }
 
 func (a *Actor) Receive(ctx actor.Context) {
@@ -42,7 +42,7 @@ func (a *Actor) Receive(ctx actor.Context) {
 		if a.pendingCommits == nil {
 			a.pendingCommits = make(map[int64]*Request)
 		}
-		
+
 		if !a.isPrimary {
 			// If backup, Subscribe to the primary actor
 			for _, target := range a.targets {
@@ -76,14 +76,14 @@ func (a *Actor) Receive(ctx actor.Context) {
 		}
 		log.Printf("%s: Received Write(LSN=%d, Key=%s, Value=%s) from %s\n",
 			role(a.isPrimary), msg.Lsn, msg.Key, msg.Val, senderStr)
-		a.logMu.Lock() // Guarding Log
+		a.Mu.Lock()                // Guarding Log
 		a.Log[msg.Lsn] = &Request{ // Remember requested LSN in Log
 			Type: "WRITE",
 			Key:  msg.Key,
 			Val:  msg.Val,
 			LSN:  msg.Lsn,
 		}
-		a.logMu.Unlock()
+		a.Mu.Unlock()
 		// Only send Ack if we have a valid sender
 		if ctx.Sender() != nil {
 			ctx.Request(ctx.Sender(), &messages.Ack{Lsn: msg.Lsn}) // Tell primary we logged the requested LSN
@@ -94,14 +94,14 @@ func (a *Actor) Receive(ctx actor.Context) {
 			log.Printf("Primary: Received Ack(LSN=%d) from %s\n", msg.Lsn, ctx.Sender().String())
 			acks, exists := a.Server.RecordAck(msg.Lsn)
 
-			if exists && acks >= 2 { // Quorum reached (w/ 2 backups + 1 primary)
+			if exists && acks >= int(math.Ceil(float64(a.subscribers+1)/2.0)) { // Quorum reached; Quorum is subscribers + primary / 2 rounded up
 				// Check if we can apply this LSN (previous must be applied)
 				lastApplied := a.lastAppliedLSN.Load()
-				
+
 				if msg.Lsn == lastApplied+1 {
 					// We can apply this LSN immediately
 					a.applyLSNToPrimary(msg.Lsn)
-					
+
 					// Now check if any pending LSNs can be applied
 					a.applyPendingLSNs()
 				} else if msg.Lsn > lastApplied+1 {
@@ -121,42 +121,42 @@ func (a *Actor) Receive(ctx actor.Context) {
 		}
 	case *messages.Commit:
 		log.Printf("%s: Received Commit(LSN=%d) from %s\n", role(a.isPrimary), msg.Lsn, ctx.Sender().String())
-		
+
 		// Check if we can apply this LSN
 		lastApplied := a.lastAppliedLSN.Load()
-		
+
 		if msg.Lsn == lastApplied+1 {
 			// Apply immediately
 			a.applyLSNToBackup(msg.Lsn)
-			
+
 			// Check if any queued commits can now be applied
 			a.applyPendingCommitsToBackup()
 		} else if msg.Lsn > lastApplied+1 {
 			// Queue for later
-			log.Printf("%s: Queuing Commit for LSN %d (waiting for LSN %d)\n", 
+			log.Printf("%s: Queuing Commit for LSN %d (waiting for LSN %d)\n",
 				role(a.isPrimary), msg.Lsn, lastApplied+1)
-			a.logMu.Lock()
+			a.Mu.Lock()
 			if req, exists := a.Log[msg.Lsn]; exists {
 				a.pendingMu.Lock()
 				a.pendingCommits[msg.Lsn] = req
 				a.pendingMu.Unlock()
 			}
-			a.logMu.Unlock()
+			a.Mu.Unlock()
 		} else {
 			// Already applied
-			log.Printf("%s: LSN %d already applied (lastApplied=%d)\n", 
+			log.Printf("%s: LSN %d already applied (lastApplied=%d)\n",
 				role(a.isPrimary), msg.Lsn, lastApplied)
 		}
-		
+
 	case *messages.Read:
 		log.Printf("%s: Received Read(LSN=%d, Key=%s) from %s\n", role(a.isPrimary), msg.Lsn, msg.Request, ctx.Sender().String())
-		a.logMu.Lock()
+		a.Mu.Lock()
 		a.Log[msg.Lsn] = &Request{
 			Type: "READ",
 			Key:  msg.Request,
 			LSN:  msg.Lsn,
 		}
-		a.logMu.Unlock()
+		a.Mu.Unlock()
 
 		// Update lastAppliedLSN for READ operations on backups
 		// READs still consume LSN slots and must be tracked for ordering
@@ -177,8 +177,8 @@ func (a *Actor) applyLSNToPrimary(lsn int64) {
 		return
 	}
 
-	a.storeMu.Lock()
-	defer a.storeMu.Unlock()
+	a.Mu.Lock()
+	defer a.Mu.Unlock()
 
 	if toCom.request.Type == "WRITE" {
 		// Send commit to backups
@@ -186,14 +186,14 @@ func (a *Actor) applyLSNToPrimary(lsn int64) {
 			log.Printf("Primary: Sending Commit(LSN=%d) to %s\n", lsn, target.String())
 			a.ctx.Send(target, &messages.Commit{Lsn: lsn})
 		}
-		
+
 		// Apply to store
 		a.store[toCom.request.Key] = toCom.request.Val
 		log.Printf("Primary: Applied LSN %d (Key=%s, Value=%s) to store\n", lsn, toCom.request.Key, toCom.request.Val)
-		
+
 		// Update last applied
 		a.lastAppliedLSN.Store(lsn)
-		
+
 		// Send response to client
 		a.Server.CompletePendingRequest(lsn, &Response{
 			Success: true,
@@ -204,10 +204,10 @@ func (a *Actor) applyLSNToPrimary(lsn int64) {
 	} else {
 		// Read operation
 		val, exists := a.store[toCom.request.Key]
-		
+
 		// Update last applied
 		a.lastAppliedLSN.Store(lsn)
-		
+
 		if exists {
 			a.Server.CompletePendingRequest(lsn, &Response{
 				Success: true,
@@ -231,19 +231,19 @@ func (a *Actor) applyPendingLSNs() {
 	for {
 		lastApplied := a.lastAppliedLSN.Load()
 		nextLSN := lastApplied + 1
-		
+
 		a.pendingMu.Lock()
 		_, hasPending := a.pendingCommits[nextLSN]
 		a.pendingMu.Unlock()
-		
+
 		if !hasPending {
 			// No more consecutive LSNs to apply
 			break
 		}
-		
+
 		log.Printf("Primary: Applying queued LSN %d\n", nextLSN)
 		a.applyLSNToPrimary(nextLSN)
-		
+
 		// Remove from pending
 		a.pendingMu.Lock()
 		delete(a.pendingCommits, nextLSN)
@@ -253,22 +253,22 @@ func (a *Actor) applyPendingLSNs() {
 
 // applyLSNToBackup applies a single LSN to the backup's store
 func (a *Actor) applyLSNToBackup(lsn int64) {
-	a.logMu.Lock()
+	a.Mu.Lock()
 	req, exists := a.Log[lsn]
-	a.logMu.Unlock()
-	
+	a.Mu.Unlock()
+
 	if !exists {
 		log.Printf("%s: Cannot apply LSN %d - not found in log\n", role(a.isPrimary), lsn)
 		return
 	}
-	
-	a.storeMu.Lock()
+
+	a.Mu.Lock()
 	a.store[req.Key] = req.Val
-	a.storeMu.Unlock()
-	
+	a.Mu.Unlock()
+
 	// Update last applied
 	a.lastAppliedLSN.Store(lsn)
-	
+
 	log.Printf("%s: Applied LSN %d (Key=%s, Value=%s) to store\n", role(a.isPrimary), lsn, req.Key, req.Val)
 }
 
@@ -277,19 +277,19 @@ func (a *Actor) applyPendingCommitsToBackup() {
 	for {
 		lastApplied := a.lastAppliedLSN.Load()
 		nextLSN := lastApplied + 1
-		
+
 		a.pendingMu.Lock()
 		_, hasPending := a.pendingCommits[nextLSN]
 		a.pendingMu.Unlock()
-		
+
 		if !hasPending {
 			// No more consecutive LSNs to apply
 			break
 		}
-		
+
 		log.Printf("%s: Applying queued commit for LSN %d\n", role(a.isPrimary), nextLSN)
 		a.applyLSNToBackup(nextLSN)
-		
+
 		// Remove from pending
 		a.pendingMu.Lock()
 		delete(a.pendingCommits, nextLSN)
@@ -299,6 +299,12 @@ func (a *Actor) applyPendingCommitsToBackup() {
 
 func (a *Actor) write(req *Request) {
 	// Step 1) Atomically increment and get new LSN
+	// if a.firstRun {
+	// 	a.firstRun = false
+	// 	req.LSN = 2
+	// } else {
+	// 	req.LSN = 1
+	// }
 	req.LSN = a.lsn.Add(1) // Increment and get new LSN
 
 	// Step 2) Register pending request with correct LSN
@@ -312,9 +318,9 @@ func (a *Actor) write(req *Request) {
 	}
 
 	// Log the request in the primary's log
-	a.logMu.Lock()
+	a.Mu.Lock()
 	a.Log[req.LSN] = req
-	a.logMu.Unlock()
+	a.Mu.Unlock()
 
 	for _, target := range a.targets {
 		log.Printf("%s: Sending Write(LSN=%d, Key=%s, Value=%s) to %s\n",
@@ -325,8 +331,8 @@ func (a *Actor) write(req *Request) {
 
 func (a *Actor) read(req *Request) {
 	if !a.isPrimary {
-		a.storeMu.Lock()
-		defer a.storeMu.Unlock()
+		a.Mu.Lock()
+		defer a.Mu.Unlock()
 
 		if val, exists := a.store[req.Key]; exists {
 			// Return the value if key exists
@@ -352,9 +358,9 @@ func (a *Actor) read(req *Request) {
 		a.Server.UpdatePendingRequestLSN(-1, req.LSN, req)
 
 		// Log the request in the primary's log
-		a.logMu.Lock()
+		a.Mu.Lock()
 		a.Log[req.LSN] = req
-		a.logMu.Unlock()
+		a.Mu.Unlock()
 
 		accept := &messages.Read{
 			Lsn:     req.LSN,
