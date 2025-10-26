@@ -45,8 +45,8 @@ func main() {
 
 	flag.Parse()
 
-	// selfIP := getLocalIP()
-	selfIP := "127.0.0.1"
+	selfIP := getLocalIP()
+	// selfIP := "127.0.0.1"
 	system := actor.NewActorSystem()
 	remoteConfig := remote.Configure(selfIP, *port)
 	remoter := remote.NewRemote(system, remoteConfig)
