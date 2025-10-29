@@ -278,15 +278,3 @@ func (s *Server) GetPendingRequest(lsn int64) (*PendingRequest, bool) {
 	pending, exists := s.pendingReqs[lsn]
 	return pending, exists
 }
-
-// Checks to see if lsn is committed
-func (s *Server) isCommitted(lsn int64) bool {
-	s.pendingMu.Lock()
-	defer s.pendingMu.Unlock()
-	for _, committedLSN := range s.committedReqs {
-		if committedLSN == lsn {
-			return true
-		}
-	}
-	return false
-}

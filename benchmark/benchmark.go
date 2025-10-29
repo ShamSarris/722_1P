@@ -160,9 +160,7 @@ func main() {
 	log.Println("Waiting for all clients to finish...")
 	wg.Wait()
 
-	// Add grace period to allow in-flight requests to complete
-	log.Println("Grace period: waiting 5 seconds for in-flight requests to complete...")
-	time.Sleep(5 * time.Second)
+	time.Sleep(5 * time.Second) // Longer wait to allow for graceful completion especially w/ 3+ clients
 
 	close(resultChan)
 
